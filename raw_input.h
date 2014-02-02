@@ -8,10 +8,6 @@
 
 std::size_t getDevicesNumber();
 
-struct RawIDevice {
-    virtual ~RawIDevice(){}
-};
-
 std::vector<RAWINPUTDEVICELIST> getDevices(std::size_t);
 std::vector<RAWINPUTDEVICELIST> getDevices();
 
@@ -20,4 +16,6 @@ QString devTypeStr(DWORD);
 QString getDeviceInfo(HANDLE);
 
 bool registerID(HWND);
+
+bool processRawInput(void * message, long * result);
 
