@@ -17,5 +17,18 @@ QString getDeviceInfo(HANDLE);
 
 bool registerID(HWND);
 
-bool processRawInput(void * message, long * result);
+bool processRawInput(void * message, long * result,
+  std::function<void(void *, unsigned short vk, bool pressed)> onKb);
+
+
+// intermediate
+
+struct devinfo{
+       QString name;
+       QString typeName;
+       void * handle;
+       unsigned short type;
+};
+
+typedef std::vector<devinfo> devinfo_vec;
 

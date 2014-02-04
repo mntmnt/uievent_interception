@@ -2,17 +2,33 @@
 
 #include "input_catcher.h"
 
+#include <visualizer.h>
+
 void getInfoXXX(QLabel & label);
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
+
+    Widget wgt;
+    wgt.show();
+
     MyLabel label;
     label.resize(500, 500);
+
+    QObject::connect(&label,
+          SIGNAL(deviceNumChanged(const devinfo_vec &)),
+          &wgt, SLOT(updateDeviceList(const devinfo_vec &))
+          );
+
+    QObject::connect(&label,
+          SIGNAL(keyboardEvent(void*,unsigned short,bool)),
+          &wgt, SLOT(onKeyboardEvent(void*,unsigned short,bool))
+          );
+    label.initRI();
     label.show();
 
-    registerID((HWND)label.winId());
 
     getInfoXXX(label);
 

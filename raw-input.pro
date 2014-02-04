@@ -28,4 +28,5 @@ SOURCES += main.cpp \
 
 HEADERS += \
     raw_input.h \
-    input_catcher.h
+    input_catcher.h \
+    visualizer.h

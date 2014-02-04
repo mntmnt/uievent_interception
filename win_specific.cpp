@@ -1,8 +1,9 @@
+#include "raw_input.h"
+
 #include <exception>
 #include <QString>
+#include <functional>
 
-
-#include "raw_input.h"
 
 std::size_t getDevicesNumber() {
     UINT number = 0u;
@@ -111,12 +112,12 @@ bool registerID(HWND id) {
    rd[0].usUsage = 6;
    rd[0].usUsagePage = 1;
    rd[0].hwndTarget = hwnd;
-   rd[0].dwFlags = RIDEV_INPUTSINK;
+   rd[0].dwFlags = RIDEV_INPUTSINK | 0x00002000;
 
    rd[1].usUsage = 2;
    rd[1].usUsagePage = 1;
    rd[1].hwndTarget = hwnd;
-   rd[1].dwFlags = RIDEV_INPUTSINK;
+   rd[1].dwFlags = RIDEV_INPUTSINK | 0x00002000; //RIDEV_DEVNOTIFY;
 
    auto res = RegisterRawInputDevices(rd, 2, sizeof(RAWINPUTDEVICE));
 
@@ -155,8 +156,14 @@ if(mouse.usButtonFlags & RI_MOUSE_WHEEL) {
 return;
 }
 
-bool processRawInput(void * message, long * result) {
+bool processRawInput(void * message, long *,
+        std::function<void(void *, unsigned short vk, bool pressed)> onKb) {
      MSG* msg = reinterpret_cast<MSG*>(message);
+
+     if(msg->message == 0x00fe) {
+         qDebug() << "PLUG/UNPLUG device";
+         return false;
+     }
 
      if(msg->message == WM_INPUT) {
         UINT sz = sizeof(RAWINPUT);
@@ -172,12 +179,16 @@ bool processRawInput(void * message, long * result) {
         if(raw->header.dwType == RIM_TYPEMOUSE) {
             processMouse(raw->data.mouse);
 
+            DefRawInputProc(&raw, 1, sizeof(RAWINPUTHEADER));
+
         } else if (raw->header.dwType == RIM_TYPEKEYBOARD) {
+
              USHORT vk = raw->data.keyboard.VKey;
              bool isKeyDown = raw->data.keyboard.Flags & RI_KEY_MAKE ? true : false;
              bool isKeyUp = raw->data.keyboard.Flags & RI_KEY_BREAK ? true : false;
-             qDebug() << "0x" << QString::number(vk, 16) << (isKeyDown ? " .KEYDOWN. " : " .?. ") <<
-               (isKeyUp ? " .KEYUP. " : " .?. ");
+
+             onKb(raw->header.hDevice, vk, isKeyDown);
+
         } else if (raw->header.dwType == RIM_TYPEHID) {
         }
         return true;
