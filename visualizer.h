@@ -8,6 +8,8 @@
 #include <utility>
 #include <QTimer>
 
+#include <QtWinExtras>
+
 #include <QDebug>
 
 #include "raw_input.h"
@@ -25,6 +27,13 @@ public:
     Widget() {
        resize(700, 400);
        show();
+
+       if (QtWin::isCompositionEnabled()) {
+               QtWin::extendFrameIntoClientArea(this, -1, -1, -1, -1);
+               setAttribute(Qt::WA_TranslucentBackground, true);
+               setAttribute(Qt::WA_NoSystemBackground, false);
+               setStyleSheet("Widget { background: transparent; }");
+       }
 
        layout = new QVBoxLayout(this);
        this->setLayout(layout);
