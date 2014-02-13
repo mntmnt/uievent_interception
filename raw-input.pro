@@ -30,4 +30,8 @@ SOURCES += main.cpp \
 HEADERS += \
     raw_input.h \
     input_catcher.h \
-    visualizer.h
+    visualizer.h \
+    mouse-widget.h
+
+RESOURCES += \
+    rec.qrc

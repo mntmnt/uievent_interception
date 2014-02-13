@@ -2,14 +2,17 @@
 
 #include "input_catcher.h"
 
-#include <visualizer.h>
+#include "visualizer.h"
 
 void getInfoXXX(QLabel & label);
+#include "mouse-widget.h"
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
+    MouseWidget mswgt;
+    mswgt.show();
 
     Widget wgt;
     wgt.show();
