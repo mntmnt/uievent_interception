@@ -2,7 +2,6 @@
 
 #include "input_catcher.h"
 
-
 #include "visualizer.h"
 #include "mouse_widget.h"
 
@@ -14,28 +13,27 @@ int main(int argc, char *argv[])
 
     MouseWidget mv(0);
     mv.show();
-    mv.resize(100,100);
 
-    Widget wgt;
-    wgt.show();
+//    Widget wgt;
+//    wgt.show();
 
-    MyLabel label;
-    label.resize(500, 500);
+//    MyLabel label;
+//    label.resize(500, 500);
 
-    QObject::connect(&label,
-          SIGNAL(deviceNumChanged(const devinfo_vec &)),
-          &wgt, SLOT(updateDeviceList(const devinfo_vec &))
-          );
+//    QObject::connect(&label,
+//          SIGNAL(deviceNumChanged(const devinfo_vec &)),
+//          &wgt, SLOT(updateDeviceList(const devinfo_vec &))
+//          );
 
-    QObject::connect(&label,
-          SIGNAL(keyboardEvent(void*,unsigned short,bool)),
-          &wgt, SLOT(onKeyboardEvent(void*,unsigned short,bool))
-          );
-    label.initRI();
-    label.show();
+//    QObject::connect(&label,
+//          SIGNAL(keyboardEvent(void*,unsigned short,bool)),
+//          &wgt, SLOT(onKeyboardEvent(void*,unsigned short,bool))
+//          );
+//    label.initRI();
+//    label.show();
 
 
-    getInfoXXX(label);
+//    getInfoXXX(label);
 
     return a.exec();
 }
