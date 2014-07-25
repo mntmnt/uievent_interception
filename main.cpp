@@ -3,7 +3,6 @@
 #include "input_catcher.h"
 
 #include "visualizer.h"
-#include "mouse_widget.h"
 
 void getInfoXXX(QLabel & label);
 
@@ -11,11 +10,8 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
-    MouseWidget mv(0);
-    mv.show();
-
-//    Widget wgt;
-//    wgt.show();
+    Widget wgt;
+    wgt.show();
 
 //    MyLabel label;
 //    label.resize(500, 500);

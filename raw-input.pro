@@ -24,8 +24,8 @@ SOURCES += main.cpp \
 #    tray_icon.h \
 #    activity_driver.h
 
-#RESOURCES += \
-#    resources.qrc
+RESOURCES += \
+    rec.qrc
 
 HEADERS += \
     raw_input.h \

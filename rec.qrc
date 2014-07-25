@@ -1,5 +1,5 @@
 <RCC>
     <qresource prefix="/imgs">
-        <file>mouse.png</file>
+        <file>arrows.png</file>
     </qresource>
 </RCC>

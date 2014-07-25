@@ -7,6 +7,20 @@
 #include <QPen>
 #include <QBrush>
 
+const QPoint MouseBodyBasePts[] = {
+          {161, 364},   {43, 200},
+          {43, 200},  {46, 98},
+          {46, 98},   {117, 40},
+          {117, 40},  {161, 40}
+       };
+const QPoint MouseBodyCtrlPts[] = {
+          {59, 364},    {47, 241},
+          {42, 197},{46, 116},
+          {46, 66},   {92, 44},
+          MouseBodyBasePts[6], MouseBodyBasePts[7]
+       };
+
+const QSize DesignedSize = {320, 400};
 
 class MouseWidget : public QWidget {
     Q_OBJECT
@@ -14,13 +28,155 @@ class MouseWidget : public QWidget {
     QPen pen;
     QBrush brush;
 
-    const QSize DesignedSize = {320, 400};
+    QString mouseName;
 
+
+    QPoint mirrorCoords(const QPoint & p) {
+       return QPoint(DesignedSize.width() - p.x(), p.y());
+    }
+
+    QPoint adjustMirroredCoords(const QPoint & p) {
+       return adjustCoords(mirrorCoords(p));
+    }
+
+    QPoint adjustCoords(const QPoint & p) {
+       return QPoint(
+             p.x() * size().width() / DesignedSize.width(),
+             p.y() * size().height() /DesignedSize.height()
+       );
+    }
+
+    void drawMouseBody() {
+       QPainter painter(this);
+       painter.setRenderHint(QPainter::Antialiasing, true);
+       painter.setBrush(QBrush(Qt::gray, Qt::NoBrush));
+       painter.setPen(QPen(Qt::gray, 2, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+
+       QPainterPath mouse;
+
+       mouse.moveTo(adjustCoords(MouseBodyBasePts[0]));
+       mouse.cubicTo(adjustCoords(MouseBodyCtrlPts[0]), adjustCoords(MouseBodyCtrlPts[1]), adjustCoords(MouseBodyBasePts[1]));
+       mouse.cubicTo(adjustCoords(MouseBodyCtrlPts[2]), adjustCoords(MouseBodyCtrlPts[3]), adjustCoords(MouseBodyBasePts[3]));
+       mouse.cubicTo(adjustCoords(MouseBodyCtrlPts[4]), adjustCoords(MouseBodyCtrlPts[5]), adjustCoords(MouseBodyBasePts[5]));
+       mouse.cubicTo(adjustCoords(MouseBodyCtrlPts[6]), adjustCoords(MouseBodyCtrlPts[7]), adjustCoords(MouseBodyBasePts[7]));
+
+       mouse.cubicTo(adjustMirroredCoords(MouseBodyCtrlPts[7]), adjustMirroredCoords(MouseBodyCtrlPts[6]), adjustMirroredCoords(MouseBodyBasePts[5]));
+       mouse.cubicTo(adjustMirroredCoords(MouseBodyCtrlPts[5]), adjustMirroredCoords(MouseBodyCtrlPts[4]), adjustMirroredCoords(MouseBodyBasePts[3]));
+       mouse.cubicTo(adjustMirroredCoords(MouseBodyCtrlPts[3]), adjustMirroredCoords(MouseBodyCtrlPts[2]), adjustMirroredCoords(MouseBodyBasePts[1]));
+       mouse.cubicTo(adjustMirroredCoords(MouseBodyCtrlPts[1]), adjustMirroredCoords(MouseBodyCtrlPts[0]), adjustMirroredCoords(MouseBodyBasePts[0]));
+
+       mouse.closeSubpath();
+
+       painter.drawPath(mouse);
+
+    }
+
+    void drawLeftButton(bool down) {
+       const QPoint &lb_1 = MouseBodyBasePts[5], lb_2(MouseBodyBasePts[5].x(), MouseBodyBasePts[1].y()),
+              &lb_3 = MouseBodyBasePts[1],
+              &lb_4 = MouseBodyBasePts[3], &lb_5 = MouseBodyBasePts[5],
+
+              ctrl_lb3 = MouseBodyCtrlPts[2], ctrl_lb4 = MouseBodyCtrlPts[3],
+              ctrl_lb4_1 = MouseBodyCtrlPts[4],ctrl_lb5 = MouseBodyCtrlPts[5];
+
+       QPainter button_painter(this);
+       button_painter.setRenderHint(QPainter::Antialiasing, true);
+       button_painter.setPen(QPen(Qt::gray, 2, Qt::SolidLine, Qt::RoundCap, Qt::MiterJoin));
+
+       QLinearGradient linearGradient(0, 0, size().width() / 2, size().height() / 2);
+       linearGradient.setColorAt(0.25, Qt::white);
+       linearGradient.setColorAt(1.0, Qt::red);
+
+       button_painter.setBrush(down ? linearGradient : QBrush(Qt::gray, Qt::NoBrush));
+
+       QPainterPath lb;
+
+       lb.moveTo(adjustCoords(lb_1));
+       lb.lineTo(adjustCoords(lb_2));
+       lb.lineTo(adjustCoords(lb_3));
+       lb.cubicTo(adjustCoords(ctrl_lb3), adjustCoords(ctrl_lb4), adjustCoords(lb_4));
+       lb.cubicTo(adjustCoords(ctrl_lb4_1), adjustCoords(ctrl_lb5), adjustCoords(lb_5));
+       button_painter.drawPath(lb);
+
+    }
+
+    void drawRightButton(bool down) {
+       const QPoint &lb_1 = MouseBodyBasePts[5], lb_2(MouseBodyBasePts[5].x(), MouseBodyBasePts[1].y()),
+              &lb_3 = MouseBodyBasePts[1],
+              &lb_4 = MouseBodyBasePts[3], &lb_5 = MouseBodyBasePts[5],
+
+              ctrl_lb3 = MouseBodyCtrlPts[2], ctrl_lb4 = MouseBodyCtrlPts[3],
+              ctrl_lb4_1 = MouseBodyCtrlPts[4],ctrl_lb5 = MouseBodyCtrlPts[5];
+
+       QPainter button_painter(this);
+       button_painter.setRenderHint(QPainter::Antialiasing, true);
+       button_painter.setPen(QPen(Qt::gray, 2, Qt::SolidLine, Qt::RoundCap, Qt::MiterJoin));
+
+       QLinearGradient linearGradient(size().width() / 2, 0, size().width(), size().height() / 2);
+       linearGradient.setColorAt(0.25, Qt::white);
+       linearGradient.setColorAt(1.0, Qt::red);
+
+       button_painter.setBrush(down ? linearGradient : QBrush(Qt::gray, Qt::NoBrush));
+
+       QPainterPath lb;
+
+       lb.moveTo(adjustMirroredCoords(lb_1));
+       lb.lineTo(adjustMirroredCoords(lb_2));
+       lb.lineTo(adjustMirroredCoords(lb_3));
+       lb.cubicTo(adjustMirroredCoords(ctrl_lb3), adjustMirroredCoords(ctrl_lb4), adjustMirroredCoords(lb_4));
+       lb.cubicTo(adjustMirroredCoords(ctrl_lb4_1), adjustMirroredCoords(ctrl_lb5), adjustMirroredCoords(lb_5));
+       button_painter.drawPath(lb);
+    }
+
+    void drawWheel(int dir) {
+       QPainter painter(this);
+       painter.setRenderHint(QPainter::Antialiasing, true);
+       painter.setPen(QPen(Qt::gray, 2, Qt::SolidLine, Qt::RoundCap, Qt::MiterJoin));
+
+       painter.setBrush(QBrush(dir == 0 ? Qt::black : Qt::green, Qt::Dense5Pattern));
+
+       QPoint lt(DesignedSize.width() / 2 - (
+           DesignedSize.width() / 2 - MouseBodyBasePts[6].x()) / 2,
+           MouseBodyBasePts[6].y() + (MouseBodyBasePts[2].y() - MouseBodyBasePts[6].y()) * 0.25
+       );
+       QPoint rb(DesignedSize.width() / 2 + (
+           DesignedSize.width() / 2 - MouseBodyBasePts[6].x()) / 2,
+           MouseBodyBasePts[6].y() + (MouseBodyBasePts[2].y() - MouseBodyBasePts[6].y()) * 0.75
+       );
+
+       QPoint tl = adjustCoords(lt), br = adjustCoords(rb);
+
+       painter.drawRect(tl.x(), tl.y(), br.x() - tl.x(), br.y() - tl.y());
+    }
+
+    void drawMidButton(bool down) {
+       const QPoint &mb_1 = MouseBodyBasePts[6],
+               &mb_2 = MouseBodyBasePts[7],
+               &mb_3 = {MouseBodyBasePts[5].x(), MouseBodyBasePts[1].y()};
+
+       QPainter button_painter(this);
+       button_painter.setRenderHint(QPainter::Antialiasing, true);
+       button_painter.setPen(QPen(Qt::gray, 2, Qt::SolidLine, Qt::RoundCap, Qt::MiterJoin));
+
+       QLinearGradient linearGradient(size().width() / 2, 0, size().width(), size().height() / 2);
+       linearGradient.setColorAt(0.25, Qt::white);
+       linearGradient.setColorAt(1.0, Qt::red);
+
+       button_painter.setBrush(down ? linearGradient : QBrush(Qt::gray, Qt::NoBrush));
+
+       QPainterPath lb;
+
+       lb.moveTo(adjustCoords(mb_1));
+       lb.lineTo(adjustCoords(mb_2));
+       lb.lineTo(adjustMirroredCoords(mb_2));
+       lb.lineTo(adjustMirroredCoords(mb_1));
+       lb.lineTo(adjustMirroredCoords(mb_3));
+       lb.lineTo(adjustCoords(mb_3));
+
+       button_painter.drawPath(lb);
+    }
 
 public:
-
-    void setMouseName(QString name) {
-    }
 
     MouseWidget(QWidget * o):QWidget(o) {
         if (QtWin::isCompositionEnabled()) {
@@ -30,106 +186,38 @@ public:
                 setStyleSheet("MouseWidget { background: transparent; }");
         }
 
-        pen = QPen(Qt::gray, 2, Qt::SolidLine, Qt::RoundCap, Qt::MiterJoin);
+        resize(80, 100);
 
-        QLinearGradient linearGradient(0, 0, 100, 100);
-        linearGradient.setColorAt(0.0, Qt::white);
-        linearGradient.setColorAt(0.2, Qt::green);
-        linearGradient.setColorAt(1.0, Qt::black);
-        brush = linearGradient;
+        pen = QPen(Qt::gray, 2, Qt::SolidLine, Qt::RoundCap, Qt::MiterJoin);
         brush = QBrush(Qt::gray, Qt::NoBrush);
 
     }
 
-    void drawCoords(QPainter & painter) {
-        painter.setPen(QPen(Qt::black));
-        painter.drawLine(QPoint(0, size().height() / 2),
-                         QPoint(size().width(), size().height() / 2));
-        painter.drawLine(QPoint(size().width() / 2, 0),
-                         QPoint(size().width() / 2, size().height()));
+    void paintEvent(QPaintEvent *) {
+       drawMouseBody();
 
-    }
+       drawLeftButton(false);
+       drawMidButton(false);
+       drawRightButton(false);
 
-    void paintEvent(QPaintEvent * /* event */) {
+       drawWheel( 0 );
+
        QPainter painter(this);
-       drawCoords(painter);
 
-       painter.setPen(pen);
+       painter.setPen(QPen(Qt::black));
        painter.setBrush(brush);
 
        painter.setRenderHint(QPainter::Antialiasing, true);
+       painter.drawText(QRect(0,0, size().width(), 20), mouseName);
 
-       drawCoords(painter);
-
-       QPoint p1(161, 364), p2(43.3, 200),
-              ctrl_p1(59, 364), ctrl_p2(47.3, 241.3),
-
-              &p3 = p2, p4(46, 98.4),
-              ctrl_p3(42.4, 196.7), ctrl_p4(45.5, 116),
-
-              &p5 = p4, p6(116.7, 40),
-              ctrl_p5(46, 66.2), ctrl_p6(91.5, 44),
-
-              &p7 = p6, p8(161, 40),
-              ctrl_p7 = p6, ctrl_p8 = p8;
-
-       QPoint &lb_1 = p6, lb_2(p6.x(), p2.y()), &lb_3 = p2,
-              &lb_4 = p4, &lb_5 = p6;
-
-       auto mirror_coords = [this](const QPoint & p) {
-          return QPoint(
-             this->DesignedSize.width() - p.x(),
-             p.y()
-          );
-       };
-
-       auto fix_coords = [this](const QPoint & p) -> QPoint {
-          return QPoint(
-             p.x() * this->size().width() / this->DesignedSize.width(),
-             p.y() * this->size().height() / this->DesignedSize.height()
-             );
-       };
-
-       QPainterPath mouse;
-
-       mouse.moveTo(fix_coords(p1));
-       mouse.cubicTo(fix_coords(ctrl_p1), fix_coords(ctrl_p2), fix_coords(p2));
-       mouse.cubicTo(fix_coords(ctrl_p3), fix_coords(ctrl_p4), fix_coords(p4));
-       mouse.cubicTo(fix_coords(ctrl_p5), fix_coords(ctrl_p6), fix_coords(p6));
-       mouse.cubicTo(fix_coords(ctrl_p7), fix_coords(ctrl_p8), fix_coords(p8));
-
-       mouse.cubicTo(fix_coords(mirror_coords(ctrl_p8)), fix_coords(mirror_coords(ctrl_p7)), fix_coords(mirror_coords(p6)));
-       mouse.cubicTo(fix_coords(mirror_coords(ctrl_p6)), fix_coords(mirror_coords(ctrl_p5)), fix_coords(mirror_coords(p4)));
-       mouse.cubicTo(fix_coords(mirror_coords(ctrl_p4)), fix_coords(mirror_coords(ctrl_p3)), fix_coords(mirror_coords(p2)));
-       mouse.cubicTo(fix_coords(mirror_coords(ctrl_p2)), fix_coords(mirror_coords(ctrl_p1)), fix_coords(mirror_coords(p1)));
-
-       mouse.closeSubpath();
-
-       painter.drawPath(mouse);
-
-       QPainter button_painter(this);
-       button_painter.setRenderHint(QPainter::Antialiasing, true);
-       button_painter.setPen(
-       QPen(Qt::gray, 2, Qt::SolidLine, Qt::RoundCap, Qt::MiterJoin)
-       );
-
-        QLinearGradient linearGradient(0, 0, size().width() / 2, size().height() / 2);
-        linearGradient.setColorAt(0.25, Qt::white);
-        linearGradient.setColorAt(1.0, Qt::red);
-
-
-       button_painter.setBrush(linearGradient);
-
-       QPainterPath lb;
-
-       lb.moveTo(fix_coords(lb_1));
-       lb.lineTo(fix_coords(lb_2));
-       lb.lineTo(fix_coords(lb_3));
-       lb.cubicTo(fix_coords(ctrl_p3), fix_coords(ctrl_p4), fix_coords(lb_4));
-       lb.cubicTo(fix_coords(ctrl_p5), fix_coords(ctrl_p6), fix_coords(lb_5));
-       button_painter.drawPath(lb);
+//       painter.drawImage(
+//          QPoint(size().width() / 2 - img.width() / 2, size().height() / 2), img);
     }
 
+public slots:
 
+    void setMouseName(QString name) {
+       mouseName = name;
+    }
 
 };
