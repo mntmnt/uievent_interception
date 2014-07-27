@@ -14,13 +14,17 @@ class DeviceWidget : public QWidget {
    Q_OBJECT
 protected:
    QString name;
-   void * handle;
+   DevHandle handle;
 
 public slots:
    void setName(QString str) { name = str; }
 
-   void setHandle(void * h) {
+   void setHandle(DevHandle h) {
       handle = h;
+   }
+
+   DevHandle devhandle() const {
+      return handle;
    }
 
 

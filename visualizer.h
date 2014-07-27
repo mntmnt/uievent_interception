@@ -44,41 +44,41 @@ public:
 public slots:
 
     void onKeyboardEvent(DevHandle handle,unsigned short, bool pressed) {
-
-        std::size_t index = 0u;
-        for(; index < devices.size(); ++index) {
-           if(devices[index].handle == handle)
-              break;
-        }
-        if(index < label_ptrs.size()) {
-           auto * l = label_ptrs[index];
-           KeyboardWidget * wgt = dynamic_cast<KeyboardWidget*>(l);
-           if(!pressed)
-              wgt->incClick();
-        }
+        KeyboardWidget * wgt = nullptr;
 
         if(handle == nullptr) {
-           if(!pressed)
-              dynamic_cast<KeyboardWidget*>(kb)->incClick();
-        }
-    }
-
-    void onMouseEvent(DevHandle handle, const ButtonStates & bs,WheelState ws) {
-        std::size_t index = 0u;
-        for(; index < devices.size(); ++index) {
-           if(devices[index].handle == handle)
-              break;
-        }
-        MouseWidget * wgt;
-
-        if(index < label_ptrs.size()) {
-           wgt = dynamic_cast<MouseWidget*>(label_ptrs[index]);
-        } else if(handle == nullptr) {
-           wgt = dynamic_cast<MouseWidget*>(mouse);
+            wgt = dynamic_cast<KeyboardWidget*>(mouse);
         } else {
+            for(DeviceWidget * i : label_ptrs) {
+               if(i->devhandle() == handle)
+                 wgt = dynamic_cast<KeyboardWidget*>(i);
+            }
+        }
+        if(!wgt) {
            qDebug() << "RECEIVED INPUT FOR UNKNOWN DEVICE";
            return;
         }
+
+        if(!pressed)
+              wgt->incClick();
+    }
+
+    void onMouseEvent(DevHandle handle, const ButtonStates & bs,WheelState ws) {
+        MouseWidget * wgt = nullptr;
+
+        if(handle == nullptr) {
+            wgt = dynamic_cast<MouseWidget*>(mouse);
+        } else {
+            for(DeviceWidget * i : label_ptrs) {
+               if(i->devhandle() == handle)
+                 wgt = dynamic_cast<MouseWidget*>(i);
+            }
+        }
+        if(!wgt) {
+           qDebug() << "RECEIVED INPUT FOR UNKNOWN DEVICE";
+           return;
+        }
+
         wgt->setWheelState(ws);
         wgt->setButtonStates(bs);
         wgt->update();
