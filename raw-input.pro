@@ -18,7 +18,8 @@ QMAKE_CXXFLAGS += -std=gnu++11
 
 
 SOURCES += main.cpp \
-    win_specific.cpp
+    win_specific.cpp \
+    mouse-widget.cpp
 
 #HEADERS  += \
 #    tray_icon.h \
@@ -31,5 +32,4 @@ HEADERS += \
     raw_input.h \
     input_catcher.h \
     visualizer.h \
-    mouse_group.h \
-    mouse_widget.h
+    mouse-widget.h

@@ -7,10 +7,10 @@
 
 std::size_t getDevicesNumber() {
     UINT number = 0u;
-    auto count = GetRawInputDeviceList(nullptr, &number, sizeof(RAWINPUTDEVICELIST));
 
-    if(count == (UINT)-1) {
-       throw std::runtime_error(QString::number(GetLastError()).toStdString());
+    if(GetRawInputDeviceList(nullptr, &number, sizeof(RAWINPUTDEVICELIST)) == (UINT)-1) {
+       auto le = GetLastError();
+       throw std::runtime_error(QString::number(le).toStdString());
     }
 
     return number;
@@ -20,10 +20,9 @@ std::vector<RAWINPUTDEVICELIST> getDevices(const std::size_t num) {
     std::vector<RAWINPUTDEVICELIST> devices(num);
     UINT number = num;
 
-    auto count = GetRawInputDeviceList(&devices[0], &number, sizeof(RAWINPUTDEVICELIST));
-
-    if(count == (UINT)-1) {
-       throw std::runtime_error(QString::number(GetLastError()).toStdString());
+    if(GetRawInputDeviceList(&devices[0], &number, sizeof(RAWINPUTDEVICELIST)) == (UINT)-1) {
+       auto le = GetLastError();
+       throw std::runtime_error(QString::number(le).toStdString());
     }
 
     return devices;
@@ -37,10 +36,9 @@ QString getDeviceName(HANDLE h) {
    char devname[512] = {0};
    UINT count = 512;
 
-   auto a = GetRawInputDeviceInfoA(h, RIDI_DEVICENAME, devname, &count);
-
-   if(a == (UINT)-1) {
-       throw std::runtime_error(QString::number(GetLastError()).toStdString());
+   if(GetRawInputDeviceInfoA(h, RIDI_DEVICENAME, devname, &count) == (UINT)-1) {
+       auto le = GetLastError();
+       throw std::runtime_error(QString::number(le).toStdString());
     }
 
    return devname;
@@ -95,14 +93,16 @@ QString getDeviceInfo(HANDLE h) {
     return result;
 }
 
+RimDevType getType(DWORD dwType) {
+   return dwType == RIM_TYPEHID ? RimDevType::RimHid : (
+                dwType == RIM_TYPEKEYBOARD ? RimDevType::RimKeyboard : (
+                   dwType == RIM_TYPEMOUSE ? RimDevType::RimMouse : RimDevType::RimUnknown) );
+
+}
+
 QString devTypeStr(DWORD dwType) {
-    return QString(
-             dwType == RIM_TYPEHID ? "RIM_TYPEHID(2)" : (
-                dwType == RIM_TYPEKEYBOARD ? "RIM_TYPEKEYBOARD(1)" : (
-                   dwType == RIM_TYPEMOUSE ? "RIM_MOUSE(0)" : "UNEXPECTED RIM_TYPE"
-                )
-             )
-          );
+    QString strs[] = { "UNEXPECTED RIM_TYPE", "RIM_MOUSE(0)", "RIM_TYPEKEYBOARD(1)", "RIM_TYPEHID(2)" };
+    return strs[getType(dwType)];
 }
 
 bool registerID(HWND id) {
@@ -112,61 +112,44 @@ bool registerID(HWND id) {
    rd[0].usUsage = 6;
    rd[0].usUsagePage = 1;
    rd[0].hwndTarget = hwnd;
-   rd[0].dwFlags = RIDEV_INPUTSINK | 0x00002000;
+   rd[0].dwFlags = RIDEV_INPUTSINK | RIDEV_DEVNOTIFY_redef;
 
    rd[1].usUsage = 2;
    rd[1].usUsagePage = 1;
    rd[1].hwndTarget = hwnd;
-   rd[1].dwFlags = RIDEV_INPUTSINK | 0x00002000; //RIDEV_DEVNOTIFY;
+   rd[1].dwFlags = RIDEV_INPUTSINK | RIDEV_DEVNOTIFY_redef;
 
-   auto res = RegisterRawInputDevices(rd, 2, sizeof(RAWINPUTDEVICE));
-
-   if(res == FALSE) {
-      throw std::runtime_error((QString("UNKNOWN RegisterRawInputDevices") + QString::number(GetLastError())).toStdString());
+   if(RegisterRawInputDevices(rd, 2, sizeof(RAWINPUTDEVICE)) == FALSE) {
+      auto le = GetLastError();
+      throw std::runtime_error((QString("UNKNOWN 5") + QString::number(le)).toStdString());
    }
    return true;
 }
 
 #include <QDebug>
 
-void processMouse(RAWMOUSE mouse) {
-DWORD associations[][2] = {
-{RI_MOUSE_LEFT_BUTTON_DOWN, RI_MOUSE_RIGHT_BUTTON_UP},
-{RI_MOUSE_RIGHT_BUTTON_DOWN, RI_MOUSE_RIGHT_BUTTON_UP},
-{RI_MOUSE_MIDDLE_BUTTON_DOWN, RI_MOUSE_MIDDLE_BUTTON_UP},
-{RI_MOUSE_BUTTON_1_DOWN, RI_MOUSE_BUTTON_1_UP},
-{RI_MOUSE_BUTTON_2_DOWN, RI_MOUSE_BUTTON_2_UP},
-{RI_MOUSE_BUTTON_3_DOWN, RI_MOUSE_BUTTON_3_UP},
-{RI_MOUSE_BUTTON_4_DOWN, RI_MOUSE_BUTTON_4_UP},
-{RI_MOUSE_BUTTON_5_DOWN, RI_MOUSE_BUTTON_5_UP},
-};
-std::string names[] = {"LEFT", "RIGHT", "MIDDLE", "X1", "X2", "X3", "X4", "X5"};
+void processMouse(RAWINPUT * raw, OnMouseProc proc);
+void processKeyboard(RAWINPUT * raw, OnKeyboardProc proc);
 
-for(int i = 0; i < 8; ++i) {
-    auto kd = associations[i][0], ku = associations[i][1];
-    bool is_kd = mouse.usButtonFlags & kd;
-    bool is_ku = mouse.usButtonFlags & ku;
-    if(is_kd || is_ku) {
-        qDebug() << names[i].c_str() << (is_kd ? " .DOWN. " : " ") << (is_ku ? " .UP. " : " ");
-    }
-}
-if(mouse.usButtonFlags & RI_MOUSE_WHEEL) {
-   qDebug() << " MIDDLE_MOUSE " << (signed short)mouse.usButtonData;
-}
-return;
-}
+
 
 bool processRawInput(void * message, long *,
-        std::function<void(void *, unsigned short vk, bool pressed)> onKb) {
+        OnKeyboardProc onKb, OnMouseProc onM, OnDevPlug onPlug) {
      MSG* msg = reinterpret_cast<MSG*>(message);
 
-     if(msg->message == 0x00fe) {
-         qDebug() << "PLUG/UNPLUG device";
+     if(msg->message == WM_INPUT_DEVICE_CHANGE_redef) {
+         QString msg_str = msg->wParam == GIDC_ARRIVAL_redef ? "GIDC_ARRIVAL" :
+            (msg->wParam ==  GIDC_REMOVAL_redef ? "GIDC_REMOVAL" : "Uexpected WM_INPUT_DEVICE_CHANGE");
+         qDebug() << "PLUG/UNPLUG device" << msg_str;
+
+         onPlug(reinterpret_cast<DevHandle>(msg->lParam), msg->wParam == GIDC_ARRIVAL_redef);
+
          return false;
      }
 
      if(msg->message == WM_INPUT) {
         UINT sz = sizeof(RAWINPUT);
+        //wParam RIM_INPUT RIM_INPUTSINK
 
         RAWINPUT rawd;
         // Load data into the buffer
@@ -177,21 +160,64 @@ bool processRawInput(void * message, long *,
         }
         RAWINPUT * raw = & rawd;
         if(raw->header.dwType == RIM_TYPEMOUSE) {
-            processMouse(raw->data.mouse);
-
-            DefRawInputProc(&raw, 1, sizeof(RAWINPUTHEADER));
-
+            processMouse(raw, onM);
         } else if (raw->header.dwType == RIM_TYPEKEYBOARD) {
-
-             USHORT vk = raw->data.keyboard.VKey;
-             bool isKeyDown = raw->data.keyboard.Flags & RI_KEY_MAKE ? true : false;
-             bool isKeyUp = raw->data.keyboard.Flags & RI_KEY_BREAK ? true : false;
-
-             onKb(raw->header.hDevice, vk, isKeyDown);
-
+            processKeyboard(raw, onKb);
         } else if (raw->header.dwType == RIM_TYPEHID) {
+           qDebug() << "RIM_TYPEHID received. Processing of other controls is not implemented";
         }
+        DefRawInputProc(&raw, 1, sizeof(RAWINPUTHEADER));
         return true;
      }
      return false;
 }
+
+void processKeyboard(RAWINPUT *raw, OnKeyboardProc onKb) {
+    USHORT vk = raw->data.keyboard.VKey;
+    bool isKeyDown = raw->data.keyboard.Flags & RI_KEY_MAKE ? true : false;
+    bool isKeyUp = raw->data.keyboard.Flags & RI_KEY_BREAK ? true : false;
+
+    if(isKeyDown && isKeyUp) {
+       qDebug() << "ERROR KeyDown/KeyUp happened simultaneously";
+    }
+
+    onKb(raw->header.hDevice, vk, isKeyDown && !KeyUp);
+}
+
+void processMouse(RAWINPUT * raw, OnMouseProc proc) {
+    const static DWORD associations[][2] = {
+        {RI_MOUSE_LEFT_BUTTON_DOWN, RI_MOUSE_RIGHT_BUTTON_UP},
+        {RI_MOUSE_MIDDLE_BUTTON_DOWN, RI_MOUSE_MIDDLE_BUTTON_UP},
+        {RI_MOUSE_RIGHT_BUTTON_DOWN, RI_MOUSE_RIGHT_BUTTON_UP},
+        {RI_MOUSE_BUTTON_1_DOWN, RI_MOUSE_BUTTON_1_UP},
+        {RI_MOUSE_BUTTON_2_DOWN, RI_MOUSE_BUTTON_2_UP},
+        {RI_MOUSE_BUTTON_3_DOWN, RI_MOUSE_BUTTON_3_UP},
+        {RI_MOUSE_BUTTON_4_DOWN, RI_MOUSE_BUTTON_4_UP},
+        {RI_MOUSE_BUTTON_5_DOWN, RI_MOUSE_BUTTON_5_UP},
+    };
+    const static MouseButtons buttons[] = {LeftKey, MiddleKey, RightKey, Key1, Key2, Key3, Key4, Key5};
+    constexpr auto ProcessedButtonsCount = sizeof(associations)/sizeof(*associations);
+
+    static_assert( sizeof(buttons)/sizeof(*buttons) == ProcessedButtonsCount, "expected equal size of arrays");
+    static_assert( ProcessedButtonsCount == MouseButtons::UnknownKey, "Expected Mouse Data is not equal to processed");
+
+    RAWMOUSE mouse = raw->data.mouse;
+    HANDLE h = raw->header.hDevice;
+
+    ButtonStates bs;
+
+    for(auto i = 0u; i < ProcessedButtonsCount; ++i) {
+        auto kd = associations[i][0], ku = associations[i][1];
+        bool is_kd = mouse.usButtonFlags & kd;
+        bool is_ku = mouse.usButtonFlags & ku;
+        bs[buttons[i]] = is_kd ? ButtonState::KeyDown : is_ku ? ButtonState::KeyUp : ButtonState::KeyNeutral;
+        if(is_kd && is_ku)
+           qDebug() << "Error: KEY_UP/KEY_DOWN both states were occured simultaneously";
+    }
+    WheelState ws = (mouse.usButtonFlags & RI_MOUSE_WHEEL) ?
+                static_cast<WheelState>(mouse.usButtonData) :
+                WheelState::NeutralWheel;
+
+    proc(h, bs, ws);
+}
+

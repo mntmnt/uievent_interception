@@ -1,7 +1,7 @@
 #pragma once
 
 #include <QWidget>
-#include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QLabel>
 
 #include <vector>
@@ -14,47 +14,74 @@
 
 #include "raw_input.h"
 
-class Widget : public QWidget {
+#include "mouse-widget.h"
+
+class DeviceVisualizer : public QWidget {
     Q_OBJECT
 
 public:
 
     devinfo_vec devices;
-    std::vector<QLabel*> label_ptrs;
-    QVBoxLayout * layout;
-    QLabel * label;
+    std::vector<DeviceWidget *> label_ptrs;
+    QHBoxLayout * layout;
+    DeviceWidget * mouse, * kb;
 
-    Widget() {
-       resize(700, 400);
+    DeviceVisualizer():mouse(nullptr),kb(nullptr) {
+       resize(800, 200);
        show();
 
        if (QtWin::isCompositionEnabled()) {
                QtWin::extendFrameIntoClientArea(this, -1, -1, -1, -1);
                setAttribute(Qt::WA_TranslucentBackground, true);
                setAttribute(Qt::WA_NoSystemBackground, false);
-               setStyleSheet("Widget { background: transparent; }");
+               setStyleSheet("DeviceVisualizer { background: transparent; }");
        }
 
-       layout = new QVBoxLayout(this);
+       layout = new QHBoxLayout(this);
        this->setLayout(layout);
     }
 
 public slots:
 
-    void onKeyboardEvent(void * handle,unsigned short vk, bool pressed) {
+    void onKeyboardEvent(DevHandle handle,unsigned short, bool pressed) {
+
         std::size_t index = 0u;
         for(; index < devices.size(); ++index) {
            if(devices[index].handle == handle)
               break;
         }
         if(index < label_ptrs.size()) {
-           QLabel * l = label_ptrs[index];
-           l->setText(l->text() + QString::number(vk) + (pressed ? "PRESSED" : "RELEASED"));
+           auto * l = label_ptrs[index];
+           KeyboardWidget * wgt = dynamic_cast<KeyboardWidget*>(l);
+           if(!pressed)
+              wgt->incClick();
         }
 
         if(handle == nullptr) {
-           label->setText(label->text() + QString::number(vk) + (pressed ? "PRESSED" : "RELEASED"));
+           if(!pressed)
+              dynamic_cast<KeyboardWidget*>(kb)->incClick();
         }
+    }
+
+    void onMouseEvent(DevHandle handle, const ButtonStates & bs,WheelState ws) {
+        std::size_t index = 0u;
+        for(; index < devices.size(); ++index) {
+           if(devices[index].handle == handle)
+              break;
+        }
+        MouseWidget * wgt;
+
+        if(index < label_ptrs.size()) {
+           wgt = dynamic_cast<MouseWidget*>(label_ptrs[index]);
+        } else if(handle == nullptr) {
+           wgt = dynamic_cast<MouseWidget*>(mouse);
+        } else {
+           qDebug() << "RECEIVED INPUT FOR UNKNOWN DEVICE";
+           return;
+        }
+        wgt->setWheelState(ws);
+        wgt->setButtonStates(bs);
+        wgt->update();
     }
 
 
@@ -63,24 +90,44 @@ public slots:
 
        setUpdatesEnabled(false);
 
-       for(QLabel * lbl : label_ptrs) {
+       if(mouse)delete mouse;
+       if(kb)delete kb;
+
+       for(auto * lbl : label_ptrs) {
           delete lbl;
        };
 
        label_ptrs.clear();
        label_ptrs.reserve(list.size() + 1);
 
-       label = new QLabel;
-       layout->addWidget(label);
-       label->setText("SENDINPUT KB");
+       mouse = new MouseWidget(this);
+       layout->addWidget(mouse);
+       mouse->setName("SENDINPUT Mouse");
+       mouse->setHandle(nullptr);
 
-       for(auto & dev : devices) {
-           QLabel * label = new QLabel;
+       kb = new KeyboardWidget(this);
+       layout->addWidget(kb);
+       kb->setName("SENDINPUT Keyboard");
+       kb->setHandle(nullptr);
+
+       for(devinfo & dev : devices) {
+         if(dev.type == RIM_TYPEMOUSE) {
+           DeviceWidget * label = new MouseWidget(this);
            label_ptrs.push_back(label);
-           label->setText((dev.name) + "( " + dev.typeName + ")");
-           label->show();
-           label->setFrameStyle(QFrame::Box | QFrame::Raised);
+           label->setName((dev.name) + "( " + dev.typeName + ")");
+           label->setHandle( dev.handle );
+
            layout->addWidget(label);
+         }
+         else {
+           DeviceWidget * label = new KeyboardWidget(this);
+           label_ptrs.push_back(label);
+           label->setName((dev.name) +  "( " + dev.typeName + ")");
+           label->setHandle( dev.handle );
+
+           layout->addWidget(label);
+
+         }
        }
 
        setUpdatesEnabled(true);

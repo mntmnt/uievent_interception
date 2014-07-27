@@ -5,25 +5,28 @@
 
 #include "raw_input.h"
 
-class MyLabel : public QLabel {
+class InputCatcher : public QLabel {
     Q_OBJECT
     typedef QByteArray NativeEventType;
 
     bool nativeEvent(const NativeEventType &, void * message, long * result)
     {
        return processRawInput(message, result,
-           [this](void * h, unsigned short vk, bool pressed) {
-              keyboardEvent(h, vk, pressed);
+           [this](DevHandle h, unsigned short vk, bool pressed) {
+              emit keyboardEvent(h, vk, pressed);
+           },
+           [this](DevHandle h, const ButtonStates & bs, WheelState ws) {
+              emit mouseEvent(h, bs, ws);
+           },
+           [this](DevHandle, bool) {
+              obtainDevices();
            }
+
        );
     }
 
-public:
-
-    void initRI() {
-        registerID((HWND)this->winId());
-
-        auto deviced = getDevices();
+    void obtainDevices() {
+       auto deviced = getDevices();
         devinfo_vec v;
         v.reserve(deviced.size());
         for(RAWINPUTDEVICELIST & dev : deviced) {
@@ -32,16 +35,31 @@ public:
            di.typeName = devTypeStr(dev.dwType);
            di.name = getDeviceName(dev.hDevice);
            di.handle = dev.hDevice;
+           di.rimType = getType(dev.dwType);
            v.push_back(di);
         }
 
         emit deviceNumChanged(v);
     }
 
+public:
+    InputCatcher() {
+       setWindowTitle("Input Catcher WGT");
+       resize(100,100);
+       hide();
+    }
+
+    void initRI() {
+        registerID((HWND)this->winId());
+
+        obtainDevices();
+    }
+
 
 signals:
 
-    void keyboardEvent(void *h, unsigned short vk, bool pressed);
+    void keyboardEvent(DevHandle h, unsigned short vk, bool pressed);
+    void mouseEvent(DevHandle h, const ButtonStates & bs, WheelState ws);
 
     void deviceNumChanged(const devinfo_vec &);
 };
