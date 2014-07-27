@@ -86,6 +86,7 @@ public slots:
 
 
     void updateDeviceList(const devinfo_vec & list) {
+       qDebug() << "UPDATE DEV LIST WGT";
        devices = list;
 
        setUpdatesEnabled(false);
@@ -111,18 +112,17 @@ public slots:
        kb->setHandle(nullptr);
 
        for(devinfo & dev : devices) {
-         if(dev.type == RIM_TYPEMOUSE) {
+         if(dev.rimType == RimDevType::RimMouse) {
            DeviceWidget * label = new MouseWidget(this);
            label_ptrs.push_back(label);
-           label->setName((dev.name) + "( " + dev.typeName + ")");
+           label->setName(dev.name);
            label->setHandle( dev.handle );
 
            layout->addWidget(label);
-         }
-         else {
+         } else if(dev.rimType == RimDevType::RimKeyboard) {
            DeviceWidget * label = new KeyboardWidget(this);
            label_ptrs.push_back(label);
-           label->setName((dev.name) +  "( " + dev.typeName + ")");
+           label->setName(dev.name);
            label->setHandle( dev.handle );
 
            layout->addWidget(label);

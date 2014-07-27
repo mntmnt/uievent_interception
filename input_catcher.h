@@ -26,18 +26,8 @@ class InputCatcher : public QLabel {
     }
 
     void obtainDevices() {
-       auto deviced = getDevices();
-        devinfo_vec v;
-        v.reserve(deviced.size());
-        for(RAWINPUTDEVICELIST & dev : deviced) {
-           devinfo di;
-           di.type = dev.dwType;
-           di.typeName = devTypeStr(dev.dwType);
-           di.name = getDeviceName(dev.hDevice);
-           di.handle = dev.hDevice;
-           di.rimType = getType(dev.dwType);
-           v.push_back(di);
-        }
+       qDebug() << "OBTAIN DEV";
+        auto v = getAllDevices();
 
         emit deviceNumChanged(v);
     }
@@ -50,7 +40,7 @@ public:
     }
 
     void initRI() {
-        registerID((HWND)this->winId());
+        registerID((void*)this->winId());
 
         obtainDevices();
     }

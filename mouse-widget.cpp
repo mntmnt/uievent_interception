@@ -118,7 +118,10 @@ void MouseWidget::drawWheel(int dir) {
    painter.setRenderHint(QPainter::Antialiasing, true);
    painter.setPen(QPen(Qt::gray, 2, Qt::SolidLine, Qt::RoundCap, Qt::MiterJoin));
 
-   painter.setBrush(QBrush(dir == 0 ? Qt::black : Qt::green, Qt::Dense5Pattern));
+   painter.setBrush(QBrush(
+             dir == 0 ? Qt::black : dir == -1 ? Qt::green : Qt::red,
+             dir == 0 ? Qt::Dense5Pattern : Qt::Dense2Pattern)
+   );
 
    QPoint lt(DesignedSize.width() / 2 - (
        DesignedSize.width() / 2 - MouseBodyBasePts[6].x()) / 2,

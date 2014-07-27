@@ -107,7 +107,7 @@ public:
        drawMidButton(buttons[MouseButtons::MiddleKey] == ButtonState::KeyDown);
        drawRightButton(buttons[MouseButtons::RightKey] == ButtonState::KeyDown);
 
-       drawWheel( static_cast<unsigned>(wheel)/WheelState::ForwardWheel);
+       drawWheel( static_cast<int>(wheel)/WheelState::BackwardWheel);
 
        QPainter painter(this);
 

@@ -2,7 +2,41 @@
 
 #include <exception>
 #include <QString>
+#include <QDebug>
 #include <functional>
+
+#include <windows.h>
+
+std::vector<RAWINPUTDEVICELIST> getDevices(std::size_t);
+std::vector<RAWINPUTDEVICELIST> getDevices();
+
+QString getDeviceInfo(DevHandle);
+QString devTypeStr(DWORD);
+RimDevType getType(DWORD);
+
+#ifndef WM_INPUT_DEVICE_CHANGE
+   #define WM_INPUT_DEVICE_CHANGE_redef 0x00FE
+#else
+   #define WM_INPUT_DEVICE_CHANGE_redef WM_INPUT_DEVICE_CHANGE
+#endif
+
+#ifndef RIDEV_DEVNOTIFY
+   #define RIDEV_DEVNOTIFY_redef 0x00002000
+#else
+   #define RIDEV_DEVNOTIFY_redef RIDEV_DEVNOTIFY
+#endif
+
+#ifndef GIDC_ARRIVAL
+   #define GIDC_ARRIVAL_redef 1
+#else
+   #define GIDC_ARRIVAL_fedef GIDC_ARRIVAL
+#endif
+
+#ifndef GIDC_REMOVAL
+   #define GIDC_REMOVAL_redef 2
+#else
+   #define GIDC_REMOVAL_redef GIDC_REMOVAL
+#endif
 
 
 std::size_t getDevicesNumber() {
@@ -32,11 +66,11 @@ std::vector<RAWINPUTDEVICELIST> getDevices() {
     return getDevices(getDevicesNumber());
 }
 
-QString getDeviceName(HANDLE h) {
+QString getDeviceName(DevHandle h) {
    char devname[512] = {0};
    UINT count = 512;
 
-   if(GetRawInputDeviceInfoA(h, RIDI_DEVICENAME, devname, &count) == (UINT)-1) {
+   if(GetRawInputDeviceInfoA((HANDLE)h, RIDI_DEVICENAME, devname, &count) == (UINT)-1) {
        auto le = GetLastError();
        throw std::runtime_error(QString::number(le).toStdString());
     }
@@ -44,11 +78,11 @@ QString getDeviceName(HANDLE h) {
    return devname;
 }
 
-QString getDeviceInfo(HANDLE h) {
+QString getDeviceInfo(DevHandle h) {
     RID_DEVICE_INFO dev_inf;
     UINT size = sizeof(RID_DEVICE_INFO);
 
-    auto res = GetRawInputDeviceInfoA(h, RIDI_DEVICEINFO, &dev_inf, &size);
+    auto res = GetRawInputDeviceInfoA((HANDLE)h, RIDI_DEVICEINFO, &dev_inf, &size);
 
     if(res == (UINT)-1) {
        throw std::runtime_error(  ("Error GetRawInputDeviceInfoA" + QString::number(GetLastError())).toStdString());
@@ -93,6 +127,21 @@ QString getDeviceInfo(HANDLE h) {
     return result;
 }
 
+devinfo_vec getAllDevices() {
+        auto deviced = getDevices();
+        devinfo_vec v;
+        v.reserve(deviced.size());
+        for(RAWINPUTDEVICELIST & dev : deviced) {
+           devinfo di;
+           di.typeName = devTypeStr(dev.dwType);
+           di.name = getDeviceName(dev.hDevice);
+           di.handle = dev.hDevice;
+           di.rimType = getType(dev.dwType);
+           v.push_back(di);
+        }
+        return v;
+}
+
 RimDevType getType(DWORD dwType) {
    return dwType == RIM_TYPEHID ? RimDevType::RimHid : (
                 dwType == RIM_TYPEKEYBOARD ? RimDevType::RimKeyboard : (
@@ -105,8 +154,8 @@ QString devTypeStr(DWORD dwType) {
     return strs[getType(dwType)];
 }
 
-bool registerID(HWND id) {
-   HWND hwnd = (HWND)id;
+bool registerID(void* id) {
+   HWND hwnd = reinterpret_cast<HWND>(id);
 
    RAWINPUTDEVICE rd[2];
    rd[0].usUsage = 6;
@@ -126,7 +175,7 @@ bool registerID(HWND id) {
    return true;
 }
 
-#include <QDebug>
+
 
 void processMouse(RAWINPUT * raw, OnMouseProc proc);
 void processKeyboard(RAWINPUT * raw, OnKeyboardProc proc);
